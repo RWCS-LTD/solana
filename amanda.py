@@ -80,35 +80,70 @@ def display_heatmap(hourly_return_df):
 def main():
     st.title("Solana Blockchain: Undervaluation vs Performance Rankings; with Market Signal and Hourly Average Returns for SOL")
 
-    # Add individual buttons for each query
-    if st.button("Run Token Rankings Analysis"):
-        st.write("Executing Token Rankings Analysis...")
+    # Button to run Market Signal and Token Rankings queries
+    if st.button("Run Market Signal and Token Rankings Analysis"):
+        st.write("Executing Market Signal and Token Rankings...")
+
+        # Execute and retrieve token rankings
         token_execution_id = execute_query(query_id_1, api_key_1)
-        if token_execution_id and check_query_status(token_execution_id, api_key_1):
-            token_results = fetch_query_results(token_execution_id, api_key_1)
-            if token_results:
-                token_df = pd.DataFrame(token_results['result']['rows'])
-                display_token_rankings(token_df)
-    
-    if st.button("Run Market Signal Analysis"):
-        st.write("Executing Market Signal Analysis...")
+        if not token_execution_id:
+            return
+
+        # Execute and retrieve market signal
         market_signal_execution_id = execute_query(query_id_2, api_key_2)
-        if market_signal_execution_id and check_query_status(market_signal_execution_id, api_key_2):
-            market_signal_results = fetch_query_results(market_signal_execution_id, api_key_2)
-            if market_signal_results:
-                signal_row = market_signal_results['result']['rows'][0]
-                composite_score = round(signal_row['composite_score'], 2)
-                signal = signal_row['signal']
-                display_market_signal(signal, composite_score)
-    
+        if not market_signal_execution_id:
+            return
+
+        # Wait for both queries to finish
+        st.write("Waiting for queries to complete...")
+        if not check_query_status(token_execution_id, api_key_1):
+            return
+        if not check_query_status(market_signal_execution_id, api_key_2):
+            return
+
+        # Fetch the results of both queries
+        token_results = fetch_query_results(token_execution_id, api_key_1)
+        market_signal_results = fetch_query_results(market_signal_execution_id, api_key_2)
+
+        if not token_results or not market_signal_results:
+            st.error("Failed to fetch results from one or both queries.")
+            return
+
+        # Parse and display market signal data
+        signal_row = market_signal_results['result']['rows'][0]
+        composite_score = round(signal_row['composite_score'], 2)
+        signal = signal_row['signal']
+
+        # Display Market Signal
+        display_market_signal(signal, composite_score)
+
+        # Parse and display token rankings
+        token_df = pd.DataFrame(token_results['result']['rows'])
+        display_token_rankings(token_df)
+
+    # Button to run SOL Hourly Returns query
     if st.button("Run SOL Hourly Returns Analysis"):
         st.write("Executing SOL Hourly Returns Analysis...")
+
+        # Execute and retrieve third query (hourly returns for SOL)
         sol_return_execution_id = execute_query(query_id_3, api_key_3)
-        if sol_return_execution_id and check_query_status(sol_return_execution_id, api_key_3):
-            sol_return_results = fetch_query_results(sol_return_execution_id, api_key_3)
-            if sol_return_results:
-                hourly_return_df = pd.DataFrame(sol_return_results['result']['rows'])
-                display_heatmap(hourly_return_df)
+        if not sol_return_execution_id:
+            return
+
+        # Wait for query to finish
+        st.write("Waiting for query to complete...")
+        if not check_query_status(sol_return_execution_id, api_key_3):
+            return
+
+        # Fetch the results of the query
+        sol_return_results = fetch_query_results(sol_return_execution_id, api_key_3)
+        if not sol_return_results:
+            st.error("Failed to fetch results for SOL Hourly Returns.")
+            return
+
+        # Parse and display heatmap for hourly returns
+        hourly_return_df = pd.DataFrame(sol_return_results['result']['rows'])
+        display_heatmap(hourly_return_df)
 
     # Detailed explanation sections
     st.header("Understanding the Market Signal and Token Ranking Process")
@@ -245,3 +280,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
