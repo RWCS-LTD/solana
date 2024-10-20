@@ -2,13 +2,17 @@ import requests
 import time
 import pandas as pd
 import streamlit as st
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 # Dune API keys and query details
 api_key_1 = 'eFVEZrJ3PF7rYoT76upbQqcZkOdTmUbN'
 api_key_2 = 'GWcsj2JQ9v4F6OgfuswS8tDmU8yMr2KX'
+api_key_3 = 'geV9mpnqYUeSZzz1crWBRQ3HpRbv9SmD'
 
 query_id_1 = '4153109'  # Token rankings query ID
 query_id_2 = '4157858'  # Market signal query ID
+query_id_3 = '4158056'  # Hourly returns for SOL query ID
 
 # Function to execute query on Dune
 def execute_query(query_id, api_key):
@@ -60,9 +64,21 @@ def display_market_signal(signal, composite_score):
     st.subheader("📊 **Market Signal**")
     st.markdown(f"**Signal:** {signal} (Composite Score: **{composite_score:.2f}**)")
 
+# Function to display heatmap for hourly returns
+def display_heatmap(hourly_return_df):
+    st.subheader("📈 **Hourly Returns Heatmap (SOL)**")
+    # Use pivot to reshape the DataFrame for heatmap
+    pivot_df = hourly_return_df.pivot(index="hour_of_day", columns="day_name", values="avg_hourly_return")
+    
+    # Plotting the heatmap
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.heatmap(pivot_df, annot=True, cmap="coolwarm", ax=ax)
+    ax.set_title('Average Hourly Return by Day of Week and Hour of Day')
+    st.pyplot(fig)
+
 # Main function for Streamlit app
 def main():
-    st.title("Solana Blockchain: Undervaluation vs Performance Rankings with Market Signal")
+    st.title("Solana Blockchain: Undervaluation vs Performance Rankings; with Market Signal and Hourly Average Returns for SOL")
 
     # Add button to fetch and visualize data
     if st.button("Run Analysis"):
@@ -78,19 +94,27 @@ def main():
         if not market_signal_execution_id:
             return
 
-        # Wait for both queries to finish
+        # Execute and retrieve third query (hourly returns for SOL)
+        sol_return_execution_id = execute_query(query_id_3, api_key_3)
+        if not sol_return_execution_id:
+            return
+
+        # Wait for all queries to finish
         st.write("Waiting for queries to complete...")
         if not check_query_status(token_execution_id, api_key_1):
             return
         if not check_query_status(market_signal_execution_id, api_key_2):
             return
+        if not check_query_status(sol_return_execution_id, api_key_3):
+            return
 
-        # Fetch the results of both queries
+        # Fetch the results of all queries
         token_results = fetch_query_results(token_execution_id, api_key_1)
         market_signal_results = fetch_query_results(market_signal_execution_id, api_key_2)
+        sol_return_results = fetch_query_results(sol_return_execution_id, api_key_3)
 
-        if not token_results or not market_signal_results:
-            st.error("Failed to fetch results from one or both queries.")
+        if not token_results or not market_signal_results or not sol_return_results:
+            st.error("Failed to fetch results from one or more queries.")
             return
 
         # Parse and display market signal data
@@ -104,6 +128,10 @@ def main():
         # Parse and display token rankings
         token_df = pd.DataFrame(token_results['result']['rows'])
         display_token_rankings(token_df)
+
+        # Parse and display heatmap for hourly returns
+        hourly_return_df = pd.DataFrame(sol_return_results['result']['rows'])
+        display_heatmap(hourly_return_df)
 
     # Detailed explanation sections
     st.header("Understanding the Market Signal and Token Ranking Process")
@@ -225,6 +253,18 @@ def main():
         - A **negative score** (closer to -5) indicates the token is underperforming on most of these metrics, suggesting it might not be the best choice at the moment.
         """)
 
+    # Explanation for SOL hourly returns heatmap
+    with st.expander("🌍 How the SOL Hourly Returns are Calculated"):
+        st.markdown("""
+        ### How the Hourly Returns for SOL are Calculated
+        This analysis computes the **average hourly returns** for the SOL token on the Solana blockchain.
+        1. **Data Source**: The hourly price of SOL is sourced from the DEX Solana data over the past 3 months.
+        2. **Timezone Adjustment**: The data is adjusted to the **Toronto timezone (UTC-4)** to better reflect North American trading patterns.
+        3. **Return Calculation**: The hourly return is computed as the percentage change from one hour to the next.
+        4. **Average Calculation**: The average returns are grouped by **day of the week** and **hour of the day** to create a heatmap.
+        
+        This allows users to identify potential patterns in SOL’s price movements, helping them make more informed trading decisions based on historical performance.
+        """)
+
 if __name__ == "__main__":
     main()
-
