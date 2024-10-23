@@ -314,8 +314,8 @@ def main():
                - **Large-Cap/High-Volume Tokens**: Market cap above $100 million$.
 
         2. **Combining the Categories**:
-           - After categorizing tokens into these three groups, we combine them into a single list. This ensures that both 
-             large and smaller tokens with significant trading activity are considered for final ranking.
+           - We find the top 10 tokens for each category (ranked by Highest Total Trading Volume in the last 24 hours). We then combine this into a single list of 30 assets. This ensures that both 
+             large and smaller cap tokens with significant trading activity are considered for final ranking.
 
         3. **Selecting the Top Tokens**:
            - From this combined list, we select the **top 10 tokens** based on their total trading volume in the last 
