@@ -67,7 +67,14 @@ def display_market_signal(signal, composite_score):
 # Function to display heatmap for hourly returns
 def display_heatmap(hourly_return_df):
     st.subheader("📈 **Hourly Returns Heatmap (SOL)**")
-    # Use pivot to reshape the DataFrame for heatmap
+    
+    # Define the correct order for days of the week
+    day_order = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    
+    # Convert the day_name column to a categorical type with the specified order
+    hourly_return_df['day_name'] = pd.Categorical(hourly_return_df['day_name'], categories=day_order, ordered=True)
+    
+    # Use pivot to reshape the DataFrame for the heatmap
     pivot_df = hourly_return_df.pivot(index="hour_of_day", columns="day_name", values="avg_hourly_return")
     
     # Plotting the heatmap
@@ -75,6 +82,82 @@ def display_heatmap(hourly_return_df):
     sns.heatmap(pivot_df, annot=True, cmap="coolwarm", ax=ax)
     ax.set_title('Average Hourly Return by Day of Week and Hour of Day')
     st.pyplot(fig)
+
+def display_line_chart(hourly_return_df):
+    st.subheader("📊 **Average Hourly Returns by Day**")
+    
+    # Use line plot to show hourly returns for each day
+    plt.figure(figsize=(10, 6))
+    sns.lineplot(data=hourly_return_df, x="hour_of_day", y="avg_hourly_return", hue="day_name", marker="o")
+    
+    # Add labels and title
+    plt.title('Average Hourly Return by Day of Week and Hour of Day')
+    plt.xlabel('Hour of Day')
+    plt.ylabel('Average Hourly Return')
+    plt.grid(True)
+    st.pyplot(plt)
+
+def display_boxplot(hourly_return_df):
+    st.subheader("📊 **Distribution of Hourly Returns by Day**")
+    
+    # Plotting the box plot to display distribution of returns by day
+    plt.figure(figsize=(10, 6))
+    sns.boxplot(data=hourly_return_df, x="day_name", y="avg_hourly_return", hue="day_name", palette="Set2", dodge=False)
+    
+    # Add labels and title
+    plt.title('Hourly Return Distribution by Day of Week')
+    plt.xlabel('Day of Week')
+    plt.ylabel('Hourly Return')
+    plt.grid(True)
+    st.pyplot(plt)
+
+def display_bar_chart(hourly_return_df):
+    st.subheader("📊 **Total Average Returns by Day**")
+    
+    # Calculate total average return per day, adding observed=True to suppress the warning
+    total_returns_df = hourly_return_df.groupby('day_name', observed=True)['avg_hourly_return'].sum().reset_index()
+    
+    # Plotting bar chart
+    plt.figure(figsize=(10, 6))
+    sns.barplot(data=total_returns_df, x="day_name", y="avg_hourly_return", hue="day_name", palette="muted", dodge=False)
+    
+    # Add labels and title
+    plt.title('Total Average Hourly Return by Day of Week')
+    plt.xlabel('Day of Week')
+    plt.ylabel('Total Average Return')
+    st.pyplot(plt)
+
+def display_filtered_heatmap(hourly_return_df, threshold=0.3):
+    st.subheader("📊 **Heatmap of High-Return Hours (Threshold: +/- {:.2f})**".format(threshold))
+    
+    # Filter the DataFrame to show only returns greater than or less than the threshold
+    filtered_df = hourly_return_df[(hourly_return_df['avg_hourly_return'] > threshold) | (hourly_return_df['avg_hourly_return'] < -threshold)]
+    
+    # Use pivot to reshape the DataFrame for heatmap
+    pivot_df = filtered_df.pivot(index="hour_of_day", columns="day_name", values="avg_hourly_return")
+    
+    # Plotting the heatmap
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.heatmap(pivot_df, annot=True, cmap="coolwarm", ax=ax, vmin=-1, vmax=1)
+    ax.set_title('High-Return Hours by Day of Week and Hour of Day')
+    st.pyplot(fig)
+
+def display_rolling_average(hourly_return_df, window=3):
+    st.subheader(f"📊 **Rolling Average of Hourly Returns (Window: {window} hours)**")
+    
+    # Calculate the rolling average of the hourly returns
+    hourly_return_df['rolling_avg'] = hourly_return_df.groupby('day_name', observed=True)['avg_hourly_return'].transform(lambda x: x.rolling(window).mean())
+    
+    # Use line plot to show rolling average
+    plt.figure(figsize=(10, 6))
+    sns.lineplot(data=hourly_return_df, x="hour_of_day", y="rolling_avg", hue="day_name", marker="o")
+    
+    # Add labels and title
+    plt.title(f'Rolling Average Hourly Return by Day of Week (Window: {window} hours)')
+    plt.xlabel('Hour of Day')
+    plt.ylabel('Rolling Average Hourly Return')
+    plt.grid(True)
+    st.pyplot(plt)
 
 # Main function for Streamlit app
 def main():
@@ -144,6 +227,15 @@ def main():
         # Parse and display heatmap for hourly returns
         hourly_return_df = pd.DataFrame(sol_return_results['result']['rows'])
         display_heatmap(hourly_return_df)
+
+        # Additional Visualizations
+        display_line_chart(hourly_return_df)   # Line chart by hour
+        display_boxplot(hourly_return_df)      # Box plot by day
+        display_bar_chart(hourly_return_df)    # Bar chart for total returns
+        display_rolling_average(hourly_return_df, window=3)  # Rolling average with a 3-hour window
+
+        # Optional: Filtered heatmap (with threshold of 0.05, adjust as needed)
+        display_filtered_heatmap(hourly_return_df, threshold=0.3)
 
     # Detailed explanation sections
     st.header("Understanding the Market Signal and Token Ranking Process")
@@ -265,19 +357,41 @@ def main():
         - A **negative score** (closer to -5) indicates the token is underperforming on most of these metrics, suggesting it might not be the best choice at the moment.
         """)
 
-    # Explanation for SOL hourly returns heatmap
-    with st.expander("🌍 How the SOL Hourly Returns are Calculated"):
+    # Explanation for SOL hourly returns visualizations
+    with st.expander("🌍 How the SOL Hourly Returns are Visualized"):
         st.markdown("""
-        ### How the Hourly Returns for SOL are Calculated
-        This analysis computes the **average hourly returns** for the SOL token on the Solana blockchain.
-        1. **Data Source**: The hourly price of SOL is sourced from the DEX Solana data over the past 3 months.
-        2. **Timezone Adjustment**: The data is adjusted to the **Toronto timezone (UTC-4)** to better reflect North American trading patterns.
-        3. **Return Calculation**: The hourly return is computed as the percentage change from one hour to the next.
-        4. **Average Calculation**: The average returns are grouped by **day of the week** and **hour of the day** to create a heatmap.
-        
-        This allows users to identify potential patterns in SOL’s price movements, helping them make more informed trading decisions based on historical performance.
+        ### How the Hourly Returns for SOL are Calculated and Visualized
+        This analysis computes the **average hourly returns** for the SOL token on the Solana blockchain, offering multiple visualizations to uncover deeper insights. Here's how the data is processed and visualized:
+
+        #### 1. **Data Source**:
+        - The hourly price of SOL is sourced from the DEX Solana data over the past 3 months.
+
+        #### 2. **Timezone Adjustment**:
+        - The data is adjusted to the **Toronto timezone (UTC-4)** to better reflect North American trading patterns.
+
+        #### 3. **Return Calculation**:
+        - The hourly return is computed as the percentage change from one hour to the next.
+
+        #### 4. **Heatmap**: 
+        - The **average hourly returns** are grouped by **day of the week** and **hour of the day** to create a heatmap. This allows users to quickly identify specific hours and days when SOL's price shows significant patterns or trends, such as periods of high volatility or stability.
+
+        #### 5. **Line Chart**: 
+        - A **line chart** is provided to show the trend of hourly returns throughout the day for each day of the week. This helps to highlight patterns across the days and visualize how returns fluctuate hour by hour.
+
+        #### 6. **Box Plot**: 
+        - The **box plot** displays the distribution of hourly returns for each day of the week, showing the variability (spread) of returns, as well as potential outliers. This allows users to see which days are more volatile or consistent in terms of returns.
+
+        #### 7. **Bar Chart**:
+        - The **bar chart** shows the **total average returns** for each day of the week, helping users to quickly identify which days tend to be more profitable or less profitable over the observed period.
+
+        #### 8. **Filtered Heatmap**: 
+        - A **filtered heatmap** highlights only the hours with significant positive or negative returns, based on a predefined threshold. This is useful for focusing attention on high-return or high-risk trading periods.
+
+        #### 9. **Rolling Average Line Plot**:
+        - The **rolling average line plot** smooths out hourly return fluctuations over a chosen window (e.g., 3 hours), allowing users to observe overall trends while reducing noise. This is helpful for spotting broader market cycles or shifts in trading momentum.
+
+        These visualizations together provide a comprehensive view of how SOL's price movements vary by time, helping users make more informed trading decisions based on historical performance and patterns.
         """)
 
 if __name__ == "__main__":
     main()
-
