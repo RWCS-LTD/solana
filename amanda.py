@@ -52,12 +52,36 @@ def fetch_query_results(execution_id, api_key):
 
 # Function to display token rankings
 def display_token_rankings(token_df):
-    st.subheader("🚀 **Top Ranked Tokens on Solana Blockchain**")
-    for i, row in token_df.iterrows():
+    st.subheader("🚀 **Top Ranked Tokens on Solana Blockchain (Grouped by Tiers)**")
+    
+    # Separate the tokens into three tiers
+    tier_1 = token_df[token_df['ranking'] <= 10]
+    tier_2 = token_df[(token_df['ranking'] > 10) & (token_df['ranking'] <= 20)]
+    tier_3 = token_df[token_df['ranking'] > 20]
+
+    # Display Tier 1
+    st.markdown("### **Tier 1 (Ranks 1–10):**")
+    for i, row in tier_1.iterrows():
         token = row['token']
         score = row['final_score']
-        rank = i + 1  # Adjusting rank to start from 1 instead of 0
-        st.markdown(f"**{rank}.** 🏅 **{token}** — Score: **{score:.2f}**")
+        rank = row['ranking']
+        st.markdown(f"🔹 **{rank}.** 🏅 **{token}** — Score: **{score:.2f}**")
+
+    # Display Tier 2
+    st.markdown("### **Tier 2 (Ranks 11–20):**")
+    for i, row in tier_2.iterrows():
+        token = row['token']
+        score = row['final_score']
+        rank = row['ranking']
+        st.markdown(f"🔸 **{rank}.** 🏅 **{token}** — Score: **{score:.2f}**")
+
+    # Display Tier 3
+    st.markdown("### **Tier 3 (Ranks 21–30):**")
+    for i, row in tier_3.iterrows():
+        token = row['token']
+        score = row['final_score']
+        rank = row['ranking']
+        st.markdown(f"🔻 **{rank}.** 🏅 **{token}** — Score: **{score:.2f}**")
 
 # Function to display market signal
 def display_market_signal(signal, composite_score):
