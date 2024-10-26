@@ -341,10 +341,9 @@ def main():
            - We find the top 10 tokens for each category (ranked by Highest Total Trading Volume in the last 24 hours). We then combine this into a single list of 30 assets. This ensures that both 
              large and smaller cap tokens with significant trading activity are considered for final ranking.
 
-        3. **Selecting the Top Tokens**:
-           - From this combined list, we select the **top 10 tokens** based on their total trading volume in the last 
-             24 hours. These tokens are ranked based on how active they are in the market, with a focus on those showing 
-             high interest and activity.
+        3. **Ranking the Top 30 Tokens**:
+           - From this combined list, we rank the top 30 assets based on the following scoring method, focusing on high volume and activity with a relative undervalued price point. We then group these rankings into 3 tiers, 
+           helping to seperate assets based on volume/valuation performance. Use this list of ranked assets to find your next moon bag.
 
         ### How Does the Scoring System Work?
         - In addition to categorizing tokens based on market cap and volume, we use a **scoring system** that ranks 
